@@ -46,4 +46,5 @@ To play the game, you need:
 - Pygame library
 
 credits to contributors :
-...
+Alexsandro
+Caio Alves
