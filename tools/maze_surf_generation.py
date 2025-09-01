@@ -1,14 +1,11 @@
 import json, pygame
-from pygame.locals import *
 
-def main() :
+def get_maze_surface(maze_n : int) :
     with open("./mazes.json", "r") as file :
         mazes_dict = json.loads(file.read())
 
-    maze_name = "maze-" + input()
+    maze_name = "maze-" + str(maze_n)
     c_maze = mazes_dict[maze_name]
-    screen = pygame.display.set_mode((500,500))
-    pygame.display.set_caption("Maze Generation Test")
 
     maze_wall_imgs = [
         pygame.image.load("./assets/images/wall1.png").convert_alpha(),
@@ -20,8 +17,9 @@ def main() :
 
     wall_dim = maze_wall_imgs[0].get_size()
     maze_surface = pygame.Surface(
-        (wall_dim[0] * len(c_maze[0]), wall_dim[1] * len(c_maze)), pygame.SRCALPHA
+        (wall_dim[0] * len(c_maze[0]) + wall_dim[0] * 2, wall_dim[1] * len(c_maze) + wall_dim[1] * 2), pygame.SRCALPHA
     )
+    maze_surface.fill((35, 38, 41, 50))
 
     for i in range(len(c_maze)) :
         for j in range(len(c_maze[i])) :
@@ -40,7 +38,7 @@ def main() :
                     search_dir[search_dir.index((0, 1))] = 0
                 for d in search_dir :
                     if d :
-                        if c_maze[i + d[0]][j + d[1]] :
+                        if c_maze[i + d[0]][j + d[1]] == 1 :
                             wall_type += 1
 
 
@@ -59,7 +57,7 @@ def main() :
                             step += 1
                         if search_dir[d] :
                             if c_maze[i + search_dir[d][0]][j + search_dir[d][1]] == 1 :
-                                if search_dir[d - 1] and c_maze[i + search_dir[d-1][0]][j + search_dir[d-1][1]] :
+                                if search_dir[d - 1] and c_maze[i + search_dir[d-1][0]][j + search_dir[d-1][1]] == 1:
                                     wall_type = 4
                                     break
                                 if count == 1 :
@@ -81,18 +79,6 @@ def main() :
                         image_angle += 90 
                 
                 wall_img = pygame.transform.rotate(maze_wall_imgs[wall_type], image_angle)
-                maze_surface.blit(wall_img, (j * wall_dim[0], i * wall_dim[1]))
+                maze_surface.blit(wall_img, ((j + 1) * wall_dim[0], (i + 1) * wall_dim[1]))
 
-    running = True
-
-    while running :
-        for event in pygame.event.get() :
-            if event.type == pygame.QUIT :
-                running = False
-
-        screen.fill((106, 155, 195))
-        screen.blit(maze_surface, (250 - maze_surface.get_width()//2, 250 - maze_surface.get_height()//2))
-        pygame.display.flip()   
-
-if __name__ == "__main__" :
-    main()
+    return maze_surface, c_maze
