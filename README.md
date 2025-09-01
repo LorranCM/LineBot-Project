@@ -47,4 +47,4 @@ To play the game, you need:
 
 credits to contributors :
 - Alexsandro Silva de Souza
-- Caio Alves
+- Caio Alves dos Santos da Silva

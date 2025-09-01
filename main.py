@@ -5,10 +5,10 @@ from obj.Robot import Robot
 
 class Game :
     def __init__(self) :
-        self.screen = pg.display.set_mode((1200, 800), NOFRAME)
+        self.screen = pg.display.set_mode((0, 0))
         self.clock = pg.time.Clock()
         self.running = True
-        self.state = Gameplay(self, 8)
+        self.state = Gameplay(self, 20)
 
         pg.display.set_caption("LineBot")
         pg.display.set_icon(pg.image.load("assets/images/gameicon.png"))
@@ -39,9 +39,9 @@ class Gameplay :
     def __init__(self, game : Game, level : int) :
         self.game = game
         self.initial_surface, self.maze_arr = get_maze_surface(level)
-        self.robot = Robot(self.maze_arr)
+        self.robot = Robot(self.maze_arr, game.clock)
         self.panel = Panel(game)
-        self.posiion = (self.game.screen.get_width() // 2, self.game.screen.get_height() // 2)
+        self.position = (self.game.screen.get_width() // 2, self.game.screen.get_height() // 2)
         self.resize_maze()
 
         self.zoom = 1.0
@@ -55,6 +55,7 @@ class Gameplay :
         pg.display.flip()
 
     def update(self) :
+        self.robot.update()
         self.panel.update()
 
     def handle_events(self) :
@@ -67,14 +68,24 @@ class Gameplay :
                 if not self.panel.actionbar.button_pressed != -1:
                     self.panel.actionlist.handle_events(event)
 
-            if event.type == MOUSEWHEEL and not (self.panel.actionlist.rect.collidepoint(pg.mouse.get_pos()) or \
-                self.panel.actionbar.rect.collidepoint(pg.mouse.get_pos())) \
-                    and self.panel.actionbar.button_pressed == -1 :
-                if event.y > 0 and self.zoom < 1.5 :
-                    self.zoom += 0.05
-                elif event.y < 0 and self.zoom > 0.5 :
-                    self.zoom -= 0.05
-                self.resize_maze(self.zoom)
+            if event.type == MOUSEWHEEL :
+                if not (self.panel.actionlist.rect.collidepoint(pg.mouse.get_pos()) or \
+                    self.panel.actionbar.rect.collidepoint(pg.mouse.get_pos())) and \
+                    self.panel.actionbar.button_pressed == -1  :
+                    if event.y > 0 and self.zoom < 1.5 :
+                        self.zoom += 0.05
+                    elif event.y < 0 and self.zoom > 0.5 :
+                        self.zoom -= 0.05
+                    self.resize_maze(self.zoom)
+                
+                if self.panel.actionlist.rect.collidepoint(pg.mouse.get_pos()) :
+                    self.panel.actionlist.scroll += 20 * event.y
+                    if self.panel.actionlist.scroll > 0 : 
+                        self.panel.actionlist.scroll = 0
+                    if self.panel.actionlist.scroll_limit > self.panel.actionlist.scroll :
+                        self.panel.actionlist.scroll = self.panel.actionlist.scroll_limit
+
+                    self.panel.actionlist.update_action_list_rects()
             
             if event.type == MOUSEBUTTONDOWN and event.button == 1 :
                 if not (self.panel.actionlist.rect.collidepoint(pg.mouse.get_pos()) or\
@@ -98,25 +109,25 @@ class Gameplay :
 
             if event.type == MOUSEMOTION and self.screen_is_pressed :
                 dx, dy = event.rel
-                self.posiion = (self.posiion[0] + dx, self.posiion[1] + dy)
-                self.rect.center = self.posiion
+                self.position = (self.position[0] + dx, self.position[1] + dy)
+                self.rect.center = self.position
             
             if event.type == KEYDOWN :
                 if event.key == K_SPACE :
-                    self.posiion = (self.game.screen.get_width() // 2, self.game.screen.get_height() // 2)
-                    self.rect.center = self.posiion
+                    self.position = (self.game.screen.get_width() // 2, self.game.screen.get_height() // 2)
+                    self.rect.center = self.position
     
     def resize_maze(self, resize_factor : int = 1) :
         height = int(self.game.screen.get_height() * resize_factor)
         width = height * self.initial_surface.get_width() / self.initial_surface.get_height()
         self.surface = pg.transform.scale(self.initial_surface, (int(width), int(height)))
         self.rect = self.surface.get_rect(
-            center = (self.posiion)
+            center = (self.position)
         )
     
     def draw_robot(self) :
         robot_image = pg.transform.scale(
-            self.robot.original_image, ([self.surface.get_height() / (len(self.maze_arr) + 2)] * 2)
+            self.robot.original_image, ([self.surface.get_height() / (len(self.maze_arr) + 2) + 1] * 2)
         )
         robot_image = pg.transform.rotate(robot_image, self.robot.angle)
         robot_rect = robot_image.get_rect(center = (
@@ -162,13 +173,14 @@ class ActionList :
         self.rect = self.surface.get_rect()
         self.action_list = []
         self.action_list_rects = []
-
         self.action_buttons_imgs = [
             pg.image.load("assets/images/move-act.png").convert_alpha(),
             pg.image.load("assets/images/use-act.png").convert_alpha(),
             pg.image.load("assets/images/turn-right-act.png").convert_alpha(), 
             pg.image.load("assets/images/turn-left-act.png").convert_alpha()
         ]
+        self.scroll_limit = 0
+        self.scroll = 0
     
     def update(self) : ...
     
@@ -178,17 +190,25 @@ class ActionList :
             rect = pg.rect.Rect(
                 self.surface.get_width() * 0.1 * (i % 3 + 1) + self.surface.get_width() * 0.2 * (i % 3) + \
                     self.surface.get_width() * 4,
-                self.surface.get_width() * 0.1 * (i // 3 + 1) + self.surface.get_width() * 0.2 * (i // 3),
+                self.surface.get_width() * 0.1 * (i // 3 + 1) + self.surface.get_width() * 0.2 * (i // 3) + \
+                    self.scroll,
                 self.surface.get_width() * 0.2,
                 self.surface.get_width() * 0.2
             )
             self.action_list_rects.append(rect)
+        self.scroll_limit = (len(self.action_list) - 1) // 3 - (self.surface.get_height() // (self.surface.get_width() * 0.3) - 1)
+        if self.scroll_limit < 0 :
+            self.scroll_limit = 0
+        self.scroll_limit *= self.surface.get_width() * -0.3
     
     def handle_events(self, event) :
         if event.type == MOUSEBUTTONDOWN and event.button == 3 :
             for i in range(len(self.action_list_rects)) :
                 if self.action_list_rects[i].collidepoint(pg.mouse.get_pos()) :
                     self.action_list.pop(i)
+                    self.update_action_list_rects()
+                    if self.scroll <= self.scroll_limit :
+                        self.scroll = self.scroll_limit
                     self.update_action_list_rects()
                     self.surface.fill((200, 200, 200, 240))
                     break
