@@ -2,6 +2,7 @@ import pygame as pg
 from pygame.locals import *
 from tools.maze_surf_generation import get_maze_surface
 from obj.Robot import Robot
+from obj.HomeButton import HomeButton
 
 class Game :
     def __init__(self) :
@@ -43,6 +44,7 @@ class Gameplay :
         self.panel = Panel(game)
         self.position = (self.game.screen.get_width() // 2, self.game.screen.get_height() // 2)
         self.resize_maze()
+        self.homebutton = HomeButton(game.screen)
 
         self.zoom = 1.0
         self.screen_is_pressed = 0
@@ -52,6 +54,7 @@ class Gameplay :
         self.draw_robot()
         self.game.screen.blit(self.surface, self.rect)
         self.draw_panel()
+        self.homebutton.draw()
         pg.display.flip()
 
     def update(self) :
@@ -201,7 +204,7 @@ class ActionList :
             self.scroll_limit = 0
         self.scroll_limit *= self.surface.get_width() * -0.3
     
-    def handle_events(self, event) :
+    def handle_events(self, event : pg.event.Event) :
         if event.type == MOUSEBUTTONDOWN and event.button == 3 :
             for i in range(len(self.action_list_rects)) :
                 if self.action_list_rects[i].collidepoint(pg.mouse.get_pos()) :
@@ -240,7 +243,7 @@ class ActionBar :
                 )
                 self.action_buttons_rects.append(button_rect)
     
-    def handle_events(self, event) :
+    def handle_events(self, event : pg.event.Event) :
         if event.type == MOUSEBUTTONDOWN and event.button == 1 :
             for i in range(len(self.action_buttons_rects)) :
                 if self.action_buttons_rects[i].collidepoint(pg.mouse.get_pos()) :
