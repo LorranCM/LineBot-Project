@@ -12,6 +12,4 @@ class Button :
     def get_pressed(self) :
         if self.rect.collidepoint(pg.mouse.get_pos()) :
             self.action()
-            
-    def action(self) :
-        pass
+        

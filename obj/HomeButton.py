@@ -7,7 +7,5 @@ class HomeButton(Button) :
         image = pg.image.load("./assets/images/home-button-icon.png")
         image = pg.transform.scale(image, size)
         super().__init__(image, surface)
-        self.rect.topleft = [surface.get_height() * 0.025] * 2
-    
-    def action(self) :
-        pass
+        self.rect.topleft = [surface.get_height() * 0.05] * 2
+        

@@ -4,6 +4,7 @@ from tools.maze_surf_generation import get_maze_surface
 from obj.Robot import Robot
 from obj.HomeButton import HomeButton
 from obj.StartButton import StartButton
+from obj.TrashButton import TrashButton
 
 class Game :
     def __init__(self) :
@@ -47,9 +48,11 @@ class Gameplay :
         self.resize_maze()
         self.homebutton = HomeButton(game.screen)
         self.startbutton = StartButton(game.screen)
-
+        self.trashbutton = TrashButton(game.screen, self.panel.actionlist)
         self.zoom = 1.0
         self.screen_is_pressed = 0
+        def action () : self.game.state = MainMenu(game)
+        self.homebutton.action = action
 
     def draw(self) :
         self.game.screen.fill((139, 145, 150))
@@ -58,6 +61,7 @@ class Gameplay :
         self.draw_panel()
         self.homebutton.draw()
         self.startbutton.draw()
+        self.trashbutton.draw()
         pg.display.flip()
 
     def update(self) :
@@ -95,6 +99,8 @@ class Gameplay :
             
             if event.type == MOUSEBUTTONDOWN and event.button == 1 :
                 self.homebutton.get_pressed()
+                self.startbutton.get_pressed()
+                self.trashbutton.get_pressed()
                 if not (self.panel.actionlist.rect.collidepoint(pg.mouse.get_pos()) or\
                     self.panel.actionbar.rect.collidepoint(pg.mouse.get_pos())) :
                     self.screen_is_pressed = 1
