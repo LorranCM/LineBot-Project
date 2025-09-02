@@ -3,6 +3,7 @@ from pygame.locals import *
 from tools.maze_surf_generation import get_maze_surface
 from obj.Robot import Robot
 from obj.HomeButton import HomeButton
+from obj.StartButton import StartButton
 
 class Game :
     def __init__(self) :
@@ -45,6 +46,7 @@ class Gameplay :
         self.position = (self.game.screen.get_width() // 2, self.game.screen.get_height() // 2)
         self.resize_maze()
         self.homebutton = HomeButton(game.screen)
+        self.startbutton = StartButton(game.screen)
 
         self.zoom = 1.0
         self.screen_is_pressed = 0
@@ -55,6 +57,7 @@ class Gameplay :
         self.game.screen.blit(self.surface, self.rect)
         self.draw_panel()
         self.homebutton.draw()
+        self.startbutton.draw()
         pg.display.flip()
 
     def update(self) :
@@ -91,6 +94,7 @@ class Gameplay :
                     self.panel.actionlist.update_action_list_rects()
             
             if event.type == MOUSEBUTTONDOWN and event.button == 1 :
+                self.homebutton.get_pressed()
                 if not (self.panel.actionlist.rect.collidepoint(pg.mouse.get_pos()) or\
                     self.panel.actionbar.rect.collidepoint(pg.mouse.get_pos())) :
                     self.screen_is_pressed = 1
