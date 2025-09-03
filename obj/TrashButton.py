@@ -13,4 +13,4 @@ class TrashButton(Button) :
     def action(self) :
         self.actionlist.action_list.clear()
         self.actionlist.update_action_list_rects()
-        print("oi")
+        

@@ -12,10 +12,13 @@ class StartButton(Button) :
         super().__init__(self.images[0], surface)
         self.rect.bottomleft = surface.get_height() * 0.05, surface.get_height() * (1 - 0.05)
         self.robot_moving = False
+        self.running = False
     
     def action(self) :
-        self.robot_moving = not self.robot_moving
-        if self.robot_moving :
+        self.running = not self.running
+        if self.running :
             self.image = self.images[1]
+            self.robot_moving = True
         else :
+            self.robot_moving = False
             self.image = self.images[0]

@@ -11,7 +11,8 @@ class Game :
         self.screen = pg.display.set_mode((0, 0))
         self.clock = pg.time.Clock()
         self.running = True
-        self.state = Gameplay(self, 20)
+        self.level = 1
+        self.state = Gameplay(self, self.level)
 
         pg.display.set_caption("LineBot")
         pg.display.set_icon(pg.image.load("assets/images/gameicon.png"))
@@ -44,11 +45,13 @@ class Gameplay :
         self.initial_surface, self.maze_arr = get_maze_surface(level)
         self.robot = Robot(self.maze_arr, game.clock)
         self.panel = Panel(game)
+        self.robot.action_list = self.panel.actionlist.action_list
         self.position = (self.game.screen.get_width() // 2, self.game.screen.get_height() // 2)
         self.resize_maze()
         self.homebutton = HomeButton(game.screen)
         self.startbutton = StartButton(game.screen)
         self.trashbutton = TrashButton(game.screen, self.panel.actionlist)
+        self.trashbutton.rect.right = self.panel.actionlist.rect.left - game.screen.get_height() * 0.05
         self.zoom = 1.0
         self.screen_is_pressed = 0
         def action () : self.game.state = MainMenu(game)
@@ -56,8 +59,9 @@ class Gameplay :
 
     def draw(self) :
         self.game.screen.fill((139, 145, 150))
+        self.surface_copy = self.surface.copy()
         self.draw_robot()
-        self.game.screen.blit(self.surface, self.rect)
+        self.game.screen.blit(self.surface_copy, self.rect)
         self.draw_panel()
         self.homebutton.draw()
         self.startbutton.draw()
@@ -65,7 +69,13 @@ class Gameplay :
         pg.display.flip()
 
     def update(self) :
-        self.robot.update()
+        if self.robot.end :
+            self.game.level += 1 if not self.game.level == 20 else 0
+            self.game.state = Gameplay(self.game, self.game.level)
+        if self.startbutton.robot_moving :
+            if self.robot.action_queue == len(self.robot.action_list) :
+                self.startbutton.robot_moving = False
+        self.robot.update(self.startbutton.robot_moving)
         self.panel.update()
 
     def handle_events(self) :
@@ -74,8 +84,9 @@ class Gameplay :
                 self.game.running = False
             
             if not self.screen_is_pressed :
-                self.panel.actionbar.handle_events(event)
-                if not self.panel.actionbar.button_pressed != -1:
+                if not self.startbutton.running :
+                    self.panel.actionbar.handle_events(event)
+                if self.panel.actionbar.button_pressed == -1:
                     self.panel.actionlist.handle_events(event)
 
             if event.type == MOUSEWHEEL :
@@ -99,8 +110,12 @@ class Gameplay :
             
             if event.type == MOUSEBUTTONDOWN and event.button == 1 :
                 self.homebutton.get_pressed()
-                self.startbutton.get_pressed()
-                self.trashbutton.get_pressed()
+                if self.robot.action_list :
+                    self.startbutton.get_pressed()
+                    if not self.startbutton.running :
+                        self.robot.__init__(self.maze_arr, self.game.clock)
+                if not self.startbutton.running :
+                    self.trashbutton.get_pressed()
                 if not (self.panel.actionlist.rect.collidepoint(pg.mouse.get_pos()) or\
                     self.panel.actionbar.rect.collidepoint(pg.mouse.get_pos())) :
                     self.screen_is_pressed = 1
@@ -115,7 +130,8 @@ class Gameplay :
                             self.panel.actionlist.update_action_list_rects()
                             collide = True
                             break
-                    if self.panel.actionlist.rect.collidepoint(pg.mouse.get_pos()) and not collide:
+                    if self.panel.actionlist.rect.collidepoint(pg.mouse.get_pos()) and not collide and \
+                        not self.startbutton.running:
                         self.panel.actionlist.action_list.append(self.panel.actionbar.button_pressed)
                         self.panel.actionlist.update_action_list_rects()
                     self.panel.actionbar.__init__(self.game)
@@ -134,26 +150,26 @@ class Gameplay :
         height = int(self.game.screen.get_height() * resize_factor)
         width = height * self.initial_surface.get_width() / self.initial_surface.get_height()
         self.surface = pg.transform.scale(self.initial_surface, (int(width), int(height)))
+        self.surface_copy = self.surface.copy()
         self.rect = self.surface.get_rect(
             center = (self.position)
         )
     
     def draw_robot(self) :
         robot_image = pg.transform.scale(
-            self.robot.original_image, ([self.surface.get_height() / (len(self.maze_arr) + 2) + 1] * 2)
+            self.robot.original_image, ([self.surface_copy.get_height() / (len(self.maze_arr) + 2) + 1] * 2)
         )
         robot_image = pg.transform.rotate(robot_image, self.robot.angle)
         robot_rect = robot_image.get_rect(center = (
-                (self.robot.arr_position[1] + 1) * (self.surface.get_height() / (len(self.maze_arr) + 2)) +
-                self.surface.get_height() / (len(self.maze_arr) + 2) / 2,
-                (self.robot.arr_position[0] + 1) * (self.surface.get_height() / (len(self.maze_arr) + 2)) +
-                self.surface.get_height() / (len(self.maze_arr) + 2) / 2,
+                (self.robot.arr_position[1] + 1) * (self.surface_copy.get_height() / (len(self.maze_arr) + 2)) +
+                self.surface_copy.get_height() / (len(self.maze_arr) + 2) / 2,
+                (self.robot.arr_position[0] + 1) * (self.surface_copy.get_height() / (len(self.maze_arr) + 2)) +
+                self.surface_copy.get_height() / (len(self.maze_arr) + 2) / 2,
             )
         )
-        self.surface.blit(robot_image, robot_rect)
+        self.surface_copy.blit(robot_image, robot_rect)
     
     def draw_panel(self) :
-        self.panel.actionlist.rect.topright = (self.game.screen.get_width(), 0)
         self.panel.actionbar.rect.topright = (self.game.screen.get_width(), self.panel.actionlist.rect.bottom)
         self.game.screen.blit(self.panel.actionlist.surface, self.panel.actionlist.rect)
         for i in range(len(self.panel.actionlist.action_list)) : 
@@ -180,10 +196,11 @@ class Panel :
 class ActionList :
     def __init__(self, game : Game) :
         self.surface = pg.Surface(
-            (game.screen.get_width() * 0.2, game.screen.get_height() - game.screen.get_width() * 0.2), SRCALPHA
+            (game.screen.get_width() * 0.15, game.screen.get_height() - game.screen.get_width() * 0.15), SRCALPHA
         )
         self.surface.fill((200, 200, 200, 240))
         self.rect = self.surface.get_rect()
+        self.rect.topright = (game.screen.get_width(), 0)
         self.action_list = []
         self.action_list_rects = []
         self.action_buttons_imgs = [
@@ -202,14 +219,16 @@ class ActionList :
         for i in range(len(self.action_list)) :
             rect = pg.rect.Rect(
                 self.surface.get_width() * 0.1 * (i % 3 + 1) + self.surface.get_width() * 0.2 * (i % 3) + \
-                    self.surface.get_width() * 4,
+                    self.surface.get_width() * 8.5 / 1.5,
                 self.surface.get_width() * 0.1 * (i // 3 + 1) + self.surface.get_width() * 0.2 * (i // 3) + \
                     self.scroll,
                 self.surface.get_width() * 0.2,
                 self.surface.get_width() * 0.2
             )
             self.action_list_rects.append(rect)
-        self.scroll_limit = (len(self.action_list) - 1) // 3 - (self.surface.get_height() // (self.surface.get_width() * 0.3) - 1)
+        self.scroll_limit = (
+            len(self.action_list) - 1) // 3 - (self.surface.get_height() // (self.surface.get_width() * 0.3) - 1
+        )
         if self.scroll_limit < 0 :
             self.scroll_limit = 0
         self.scroll_limit *= self.surface.get_width() * -0.3
@@ -228,7 +247,7 @@ class ActionList :
 
 class ActionBar :
     def __init__(self, game : Game) :
-        self.surface = pg.Surface((game.screen.get_width() * 0.2, game.screen.get_width() * 0.2))
+        self.surface = pg.Surface((game.screen.get_width() * 0.15, game.screen.get_width() * 0.15))
         self.surface.fill((35, 38, 41))
         self.rect = self.surface.get_rect()
         self.button_pressed = -1
