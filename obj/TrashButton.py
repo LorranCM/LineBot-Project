@@ -13,4 +13,6 @@ class TrashButton(Button) :
     def action(self) :
         self.actionlist.action_list.clear()
         self.actionlist.update_action_list_rects()
+        if self.actionlist.scroll <= self.actionlist.scroll_limit :
+                        self.actionlist.scroll = self.actionlist.scroll_limit
         

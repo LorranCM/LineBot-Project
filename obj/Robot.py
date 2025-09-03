@@ -31,7 +31,9 @@ class Robot :
                 self.last_position = self.arr_position[:]
                 if int(self.last_position[0] - sin(radians(self.angle)) in (-1, len(self.maze))) or \
                    int(self.last_position[1] + cos(radians(self.angle)) in (-1, len(self.maze[0]))) or \
-                   self.maze[int(self.last_position[0] - sin(radians(self.angle)))][int(self.last_position[1] + cos(radians(self.angle)))] == 1 :
+                   self.maze[
+                        int(self.last_position[0] - int(sin(radians(self.angle))))][
+                        int(self.last_position[1] + int(cos(radians(self.angle))))] == 1 :
                     self.action = -1
             if self.action == 3 :
                 self.next_angle = self.angle + 90
@@ -48,11 +50,9 @@ class Robot :
     def move(self, tick) :
         sin_ang = int(sin(radians(self.angle)))
         cos_ang = int(cos(radians(self.angle)))
-        print(self.arr_position)
+
         self.arr_position[0] -= sin_ang * tick
         self.arr_position[1] += cos_ang * tick
-
-        print(self.arr_position)
 
         if sin_ang > 0 :
             if self.arr_position[0] <= self.last_position[0] - sin_ang :
@@ -72,9 +72,9 @@ class Robot :
                 self.action = -1
                 self.action_queue += 1
 
-        elif cos_ang < 0 :
-            if self.arr_position[1] <= self.last_position[1] - cos_ang :
-                self.arr_position[1] = self.last_position[1] - cos_ang
+        elif cos_ang < 0 : 
+            if self.arr_position[1] <= self.last_position[1] + cos_ang :
+                self.arr_position[1] = self.last_position[1] + cos_ang
                 self.action = -1
                 self.action_queue += 1
 

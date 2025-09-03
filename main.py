@@ -44,7 +44,7 @@ class Gameplay :
         self.game = game
         self.initial_surface, self.maze_arr = get_maze_surface(level)
         self.robot = Robot(self.maze_arr, game.clock)
-        self.panel = Panel(game)
+        self.panel = Panel(game, self.robot)
         self.robot.action_list = self.panel.actionlist.action_list
         self.position = (self.game.screen.get_width() // 2, self.game.screen.get_height() // 2)
         self.resize_maze()
@@ -87,7 +87,7 @@ class Gameplay :
                 if not self.startbutton.running :
                     self.panel.actionbar.handle_events(event)
                 if self.panel.actionbar.button_pressed == -1:
-                    self.panel.actionlist.handle_events(event)
+                    self.panel.actionlist.handle_events(event, self.startbutton.running)
 
             if event.type == MOUSEWHEEL :
                 if not (self.panel.actionlist.rect.collidepoint(pg.mouse.get_pos()) or \
@@ -99,7 +99,7 @@ class Gameplay :
                         self.zoom -= 0.05
                     self.resize_maze(self.zoom)
                 
-                if self.panel.actionlist.rect.collidepoint(pg.mouse.get_pos()) :
+                if self.panel.actionlist.rect.collidepoint(pg.mouse.get_pos()) and not self.startbutton.running :
                     self.panel.actionlist.scroll += 20 * event.y
                     if self.panel.actionlist.scroll > 0 : 
                         self.panel.actionlist.scroll = 0
@@ -171,6 +171,8 @@ class Gameplay :
     
     def draw_panel(self) :
         self.panel.actionbar.rect.topright = (self.game.screen.get_width(), self.panel.actionlist.rect.bottom)
+        if self.startbutton.running :
+            self.panel.actionlist.draw_queue_cursor()
         self.game.screen.blit(self.panel.actionlist.surface, self.panel.actionlist.rect)
         for i in range(len(self.panel.actionlist.action_list)) : 
             action_img = pg.transform.scale(
@@ -185,8 +187,8 @@ class Gameplay :
             )
 
 class Panel :
-    def __init__(self, game : Game) :
-        self.actionlist = ActionList(game)
+    def __init__(self, game : Game, robot : Robot) :
+        self.actionlist = ActionList(game, robot)
         self.actionbar = ActionBar(game)
     
     def update(self) :
@@ -194,7 +196,7 @@ class Panel :
         self.actionlist.update()
 
 class ActionList :
-    def __init__(self, game : Game) :
+    def __init__(self, game : Game, robot : Robot) :
         self.surface = pg.Surface(
             (game.screen.get_width() * 0.15, game.screen.get_height() - game.screen.get_width() * 0.15), SRCALPHA
         )
@@ -209,11 +211,35 @@ class ActionList :
             pg.image.load("assets/images/turn-right-act.png").convert_alpha(), 
             pg.image.load("assets/images/turn-left-act.png").convert_alpha()
         ]
+        self.queue_cursor_image = pg.transform.scale(
+            pg.image.load("assets/images/queue-cursor.png").convert_alpha(),
+            [self.surface.get_width() * 0.1] * 2
+        )
+        self.robot = robot
         self.scroll_limit = 0
         self.scroll = 0
     
-    def update(self) : ...
+    def update(self) :
+        self.surface.fill((200, 200, 200, 240))
+        self.action_queue = self.robot.action_queue
+        if self.action_queue >= len(self.robot.action_list) :
+            self.action_queue = len(self.robot.action_list) - 1
     
+    def draw_queue_cursor(self) :
+        position = [0, 0]
+        rect = self.queue_cursor_image.get_rect()
+        self.scroll = (self.action_queue) // 3 + 1 - (self.surface.get_height() // (self.surface.get_width() * 0.3))
+        if self.scroll < 0 :
+            self.scroll = 0
+        self.scroll *= self.surface.get_width() * -0.3
+        self.update_action_list_rects()
+        position[0] = self.surface.get_width() * 0.1 + \
+            (self.action_queue % 3) * self.surface.get_width() * 0.3
+        position[1] = self.surface.get_width() * 0.1 + \
+            (self.action_queue // 3) * self.surface.get_width() * 0.3 + self.scroll
+        rect.center = position
+        self.surface.blit(self.queue_cursor_image, rect)
+
     def update_action_list_rects(self) :
         self.action_list_rects = []
         for i in range(len(self.action_list)) :
@@ -233,10 +259,10 @@ class ActionList :
             self.scroll_limit = 0
         self.scroll_limit *= self.surface.get_width() * -0.3
     
-    def handle_events(self, event : pg.event.Event) :
+    def handle_events(self, event : pg.event.Event, running) :
         if event.type == MOUSEBUTTONDOWN and event.button == 3 :
             for i in range(len(self.action_list_rects)) :
-                if self.action_list_rects[i].collidepoint(pg.mouse.get_pos()) :
+                if self.action_list_rects[i].collidepoint(pg.mouse.get_pos()) and not running :
                     self.action_list.pop(i)
                     self.update_action_list_rects()
                     if self.scroll <= self.scroll_limit :
